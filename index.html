@@ -1,38 +1,307 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Google Ads ROI Calculator</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legal Google Ads ROI Calculator</title>
 
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  background: #0b1220;
+  color: #eef2ff;
+}
+.container {
+  max-width: 1000px;
+  margin: auto;
+}
+h1 { margin-bottom: 6px; }
+.subtitle {
+  color: #a7b2cc;
+  margin-bottom: 24px;
+}
+.card {
+  background: #0f1a33;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+label {
+  font-size: 12px;
+  color: #a7b2cc;
+}
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: #0b1220;
+  color: #eef2ff;
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+button {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:hover { background: #2563eb; }
+.kpi {
+  font-size: 26px;
+  font-weight: 800;
+}
+.kpi-label {
+  font-size: 12px;
+  color: #a7b2cc;
+}
+</style>
+</head>
 
-  <style>
-    :root{
-      --bg:#0b1220;
-      --card:#0f1a33;
-      --muted:#a7b2cc;
-      --text:#eef2ff;
-      --line:rgba(255,255,255,0.10);
-      --accent:#7aa2ff;
-      --accent2:#62e6b7;
-      --warn:#ffce7a;
-      --danger:#ff7a7a;
-      --shadow: 0 10px 30px rgba(0,0,0,0.35);
-      --radius: 16px;
-    }
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: radial-gradient(1200px 600px at 10% 0%, rgba(122,162,255,0.25), transparent 60%),
-                  radial-gradient(900px 500px at 90% 10%, rgba(98,230,183,0.18), transparent 55%),
-                  var(--bg);
-      color:var(--text);
-      padding: 28px 14px;
-    }
-    .wrap{ max-width:1100px; margin:0 auto; }
-    header{ display:flex; justify-content:space-between; gap:14px; margin-bottom:18px; }
-    .title{ font-size:22px; font-weight:800; }
-    .subtitle{ color:var(
+<body>
+<div class="container">
+
+<h1>Legal Google Ads ROI Calculator</h1>
+<div class="subtitle">
+Benchmarked CPC and client values by practice area and metro size
+</div>
+
+<div class="card">
+<h3>Inputs</h3>
+
+<div class="row">
+  <div>
+    <label>Practice Area</label>
+    <select id="practiceArea"></select>
+  </div>
+  <div>
+    <label>Market Size</label>
+    <select id="marketSize">
+      <option value="Small">Small Market</option>
+      <option value="Mid">Mid Market</option>
+      <option value="Large">Large Market</option>
+    </select>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <label>Monthly Ad Budget ($)</label>
+    <input id="budget" type="number" value="750">
+  </div>
+  <div>
+    <label>Average CPC ($)</label>
+    <input id="cpc" type="number">
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <label>Landing Page Conversion %</label>
+    <input id="lpConv" type="number" value="8">
+  </div>
+  <div>
+    <label>Close Rate %</label>
+    <input id="closeRate" type="number" value="35">
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <label>Average Client Value ($)</label>
+    <input id="acv" type="number">
+  </div>
+  <div></div>
+</div>
+
+<button onclick="runCalculator()">Calculate ROI</button>
+</div>
+
+<div class="card">
+<h3>Results (Monthly)</h3>
+
+<div class="row">
+  <div>
+    <div class="kpi" id="leads">–</div>
+    <div class="kpi-label">Estimated Leads</div>
+  </div>
+  <div>
+    <div class="kpi" id="clients">–</div>
+    <div class="kpi-label">Estimated Clients</div>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <div class="kpi" id="revenue">–</div>
+    <div class="kpi-label">Estimated Revenue</div>
+  </div>
+  <div>
+    <div class="kpi" id="roi">–</div>
+    <div class="kpi-label">ROI %</div>
+  </div>
+</div>
+</div>
+
+</div>
+
+<script>
+/* =====================
+   BENCHMARK DATA
+===================== */
+const BENCHMARKS = [
+{area:"Personal Injury (General)",market:"Small",cpc:55,acv:15000},
+{area:"Personal Injury (General)",market:"Mid",cpc:85,acv:22000},
+{area:"Personal Injury (General)",market:"Large",cpc:130,acv:35000},
+
+{area:"Car Accident",market:"Small",cpc:70,acv:18000},
+{area:"Car Accident",market:"Mid",cpc:110,acv:26000},
+{area:"Car Accident",market:"Large",cpc:170,acv:42000},
+
+{area:"Truck Accident",market:"Small",cpc:110,acv:30000},
+{area:"Truck Accident",market:"Mid",cpc:170,acv:45000},
+{area:"Truck Accident",market:"Large",cpc:260,acv:75000},
+
+{area:"Medical Malpractice",market:"Small",cpc:140,acv:60000},
+{area:"Medical Malpractice",market:"Mid",cpc:220,acv:95000},
+{area:"Medical Malpractice",market:"Large",cpc:360,acv:160000},
+
+{area:"Wrongful Death",market:"Small",cpc:120,acv:40000},
+{area:"Wrongful Death",market:"Mid",cpc:190,acv:65000},
+{area:"Wrongful Death",market:"Large",cpc:300,acv:110000},
+
+{area:"Slip and Fall",market:"Small",cpc:65,acv:15000},
+{area:"Slip and Fall",market:"Mid",cpc:100,acv:22000},
+{area:"Slip and Fall",market:"Large",cpc:160,acv:36000},
+
+{area:"Workers Compensation",market:"Small",cpc:45,acv:8000},
+{area:"Workers Compensation",market:"Mid",cpc:65,acv:12000},
+{area:"Workers Compensation",market:"Large",cpc:90,acv:18000},
+
+{area:"Criminal Defense",market:"Small",cpc:40,acv:7000},
+{area:"Criminal Defense",market:"Mid",cpc:60,acv:11000},
+{area:"Criminal Defense",market:"Large",cpc:90,acv:18000},
+
+{area:"DUI DWI",market:"Small",cpc:50,acv:6500},
+{area:"DUI DWI",market:"Mid",cpc:75,acv:9500},
+{area:"DUI DWI",market:"Large",cpc:115,acv:16000},
+
+{area:"Domestic Violence Defense",market:"Small",cpc:45,acv:7000},
+{area:"Domestic Violence Defense",market:"Mid",cpc:65,acv:11000},
+{area:"Domestic Violence Defense",market:"Large",cpc:100,acv:18000},
+
+{area:"Family Law (General)",market:"Small",cpc:45,acv:10000},
+{area:"Family Law (General)",market:"Mid",cpc:65,acv:15000},
+{area:"Family Law (General)",market:"Large",cpc:95,acv:26000},
+
+{area:"Divorce",market:"Small",cpc:55,acv:14000},
+{area:"Divorce",market:"Mid",cpc:80,acv:22000},
+{area:"Divorce",market:"Large",cpc:120,acv:38000},
+
+{area:"Child Custody",market:"Small",cpc:50,acv:13000},
+{area:"Child Custody",market:"Mid",cpc:75,acv:20000},
+{area:"Child Custody",market:"Large",cpc:110,acv:34000},
+
+{area:"Estate Planning",market:"Small",cpc:22,acv:3500},
+{area:"Estate Planning",market:"Mid",cpc:30,acv:6000},
+{area:"Estate Planning",market:"Large",cpc:45,acv:11000},
+
+{area:"Probate",market:"Small",cpc:28,acv:6000},
+{area:"Probate",market:"Mid",cpc:40,acv:10000},
+{area:"Probate",market:"Large",cpc:65,acv:20000},
+
+{area:"Elder Law Medicaid",market:"Small",cpc:25,acv:7000},
+{area:"Elder Law Medicaid",market:"Mid",cpc:38,acv:12000},
+{area:"Elder Law Medicaid",market:"Large",cpc:60,acv:22000},
+
+{area:"Immigration General",market:"Small",cpc:30,acv:8000},
+{area:"Immigration General",market:"Mid",cpc:45,acv:13000},
+{area:"Immigration General",market:"Large",cpc:70,acv:24000},
+
+{area:"Immigration Defense",market:"Small",cpc:55,acv:15000},
+{area:"Immigration Defense",market:"Mid",cpc:85,acv:24000},
+{area:"Immigration Defense",market:"Large",cpc:135,acv:42000},
+
+{area:"Employment Law Plaintiff",market:"Small",cpc:55,acv:18000},
+{area:"Employment Law Plaintiff",market:"Mid",cpc:85,acv:30000},
+{area:"Employment Law Plaintiff",market:"Large",cpc:135,acv:55000},
+
+{area:"Bankruptcy",market:"Small",cpc:30,acv:3500},
+{area:"Bankruptcy",market:"Mid",cpc:45,acv:5500},
+{area:"Bankruptcy",market:"Large",cpc:70,acv:9000}
+];
+
+/* =====================
+   INIT
+===================== */
+function populatePracticeAreas(){
+  const select = document.getElementById("practiceArea");
+  [...new Set(BENCHMARKS.map(b=>b.area))].forEach(a=>{
+    const o=document.createElement("option");
+    o.value=a;o.textContent=a;select.appendChild(o);
+  });
+}
+
+function applyBenchmarks(){
+  const area=practiceArea.value;
+  const market=marketSize.value;
+  const m=BENCHMARKS.find(b=>b.area===area&&b.market===market);
+  if(!m)return;
+  cpc.value=m.cpc;
+  acv.value=m.acv;
+}
+
+function runCalculator(){
+  const budgetVal=+budget.value;
+  const cpcVal=+cpc.value;
+  const lp=+lpConv.value/100;
+  const close=+closeRate.value/100;
+  const acvVal=+acv.value;
+
+  const leadsVal=(budgetVal/cpcVal)*lp;
+  const clientsVal=leadsVal*close;
+  const revenueVal=clientsVal*acvVal;
+  const roiVal=((revenueVal-budgetVal)/budgetVal)*100;
+
+  leads.textContent=Math.round(leadsVal);
+  clients.textContent=clientsVal.toFixed(1);
+  revenue.textContent="$"+Math.round(revenueVal).toLocaleString();
+  roi.textContent=Math.round(roiVal)+"%";
+}
+
+/* =====================
+   WIRE UP
+===================== */
+const practiceArea=document.getElementById("practiceArea");
+const marketSize=document.getElementById("marketSize");
+const budget=document.getElementById("budget");
+const cpc=document.getElementById("cpc");
+const lpConv=document.getElementById("lpConv");
+const closeRate=document.getElementById("closeRate");
+const acv=document.getElementById("acv");
+
+const leads=document.getElementById("leads");
+const clients=document.getElementById("clients");
+const revenue=document.getElementById("revenue");
+const roi=document.getElementById("roi");
+
+practiceArea.addEventListener("change",applyBenchmarks);
+marketSize.addEventListener("change",applyBenchmarks);
+
+populatePracticeAreas();
+applyBenchmarks();
+</script>
+
+</body>
+</html>
